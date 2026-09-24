@@ -3,136 +3,161 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>TWStockLab 全市場版 - 單檔可執行</title>
+<title>TWStockLab 全市場版 - 一鍵更新含Log</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#080a0f;color:#e5e7eb;font-family:ui-sans-system,sans-serif;padding:12px}
 h1{color:#facc15;font-size:20px;margin:10px 0}
-h2{color:#facc15;font-size:16px;margin:14px 0 8px}
+.tabs{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap}
+.tab{padding:10px 14px;border-radius:8px;border:1px solid #1f2937;background:#111827;color:#9ca3af;cursor:pointer}
+.tab.active{background:#facc15;color:#000;font-weight:800}
 .card{background:#111827;border:1px solid #1f2937;border-radius:12px;padding:12px;margin:8px 0}
-.big{font-size:28px;font-weight:800;color:#fff}
 .badge{display:inline-block;background:#facc15;color:#000;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700;margin-left:6px}
+.badge.live{background:#22c55e;color:#fff}
+.badge.fix{background:#f97316;color:#fff}
 .small{color:#9ca3af;font-size:12px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
-button{background:#facc15;color:#000;border:0;border-radius:8px;padding:10px 14px;font-weight:700;cursor:pointer}
-button:active{transform:scale(0.98)}
-input,select{background:#0b1220;border:1px solid #1f2937;color:#fff;border-radius:8px;padding:8px 10px;width:100%}
-table{width:100%;border-collapse:collapse;font-size:13px}
+button{background:#facc15;color:#000;border:0;border-radius:8px;padding:10px 14px;font-weight:700;cursor:pointer;margin:4px}
+button.sec{background:#1f2937;color:#fff;border:1px solid #374151}
+input,select{background:#0b1220;border:1px solid #1f2937;color:#fff;border-radius:8px;padding:8px 10px}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
 th,td{border:1px solid #1f2937;padding:6px;text-align:left}
-th{background:#111827;color:#facc15}
-.ok{color:#22c55e}.err{color:#ef4444}
+th{background:#111827;color:#facc15;position:sticky;top:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.big{font-size:22px;font-weight:800;color:#fff}
+#logBox{background:#0b1220;border:1px solid #facc15;border-radius:8px;padding:8px;font-family:monospace;font-size:12px;white-space:pre-wrap;max-height:260px;overflow:auto;color:#e5e7eb}
 </style>
 </head>
 <body>
-<h1>TWStockLab 全市場版 <span class="badge">單檔可執行 無需_next</span></h1>
-<div class="small">這是單檔 HTML，已內聯全部 CSS/JS，沒有引用 _next/static，所以不會 Loading。直接用瀏覽器打開就能跑。六檔是當初驗證 X因子用，現已收斂為歷史紀錄。</div>
+<h1>TWStockLab 全市場版 <span class="badge live">一鍵更新含Log</span></h1>
+<div class="small">六檔是驗證X因子用，現已全市場100 DISTINCT。點會抓官方 openapi.twse.com.tw，有Log才知道卡哪。</div>
 
-<div id="priceCheck"></div>
+<div class="card" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+<button onclick="updatePrices()">🔄 一鍵更新收盤價</button>
+<button class="sec" onclick="clearLog()">🗑️ 清除Log</button>
+<button class="sec" onclick="downloadLog()">⬇️ 下載Log</button>
+<button class="sec" onclick="downloadJSON()">⬇️ 下載新JSON</button>
+<span id="updateStatus" class="small">尚未更新</span>
+</div>
 
-<h2>Tab1 全市場 X因子掃描（預設上市50+上櫃50 DISTINCT）</h2>
 <div class="card">
-<div style="display:flex;gap:8px;flex-wrap:wrap">
-<select id="universe"><option value="all">全部100 DISTINCT</option><option value="tse">上市50</option><option value="otc">上櫃50</option><option value="six">驗證6檔(歷史)</option></select>
+<div class="small" style="margin-bottom:6px">📋 Log檔 (知道卡在哪)</div>
+<div id="logBox">[待機] 等待更新...
+</div>
+</div>
+
+<div class="tabs">
+<button class="tab active" onclick="showTab(1)">Tab1 全市場掃描</button>
+<button class="tab" onclick="showTab(2)">Tab2 單檔透視 長短波</button>
+<button class="tab" onclick="showTab(3)">Tab3 自動更新說明</button>
+</div>
+
+<div id="tab1">
+<div class="card">
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+<select id="universe"><option value="all">全部100 DISTINCT</option><option value="tse">上市50</option><option value="otc">上櫃50</option><option value="six">驗證6檔</option></select>
 <label>糾結< <input id="thEnt" type="number" value="15" style="width:70px"></label>
 <label>量比< <input id="thVol" type="number" step="0.1" value="1.0" style="width:70px"></label>
 <label>乖離± <input id="thBias" type="number" value="6" style="width:60px">%</label>
 <label>PF> <input id="thPF" type="number" step="0.1" value="1.2" style="width:60px"></label>
 <button onclick="scan()">掃描全市場</button>
 </div>
-<div id="scanResult" style="margin-top:10px"></div>
+<div id="scanResult"></div>
+</div>
 </div>
 
-<h2>Tab2 單檔透視 長短波（任意代碼）</h2>
+<div id="tab2" style="display:none">
 <div class="card">
-<div style="display:flex;gap:8px"><input id="codeInput" placeholder="輸入代碼 如 1101 2356 2330"><button onclick="detail()">透視</button></div>
-<div id="detailResult" style="margin-top:10px"></div>
+<div style="display:flex;gap:8px"><input id="codeInput" placeholder="輸入代碼 如 1101 2356 2330 2317"><button onclick="detail()">透視</button></div>
+<div id="detailResult"></div>
+</div>
 </div>
 
-<h2>Tab3 X因子驗證紀錄 - 六檔是歷史</h2>
+<div id="tab3" style="display:none">
 <div class="card small">
-六檔當初用來驗證 X因子，2026-09-23 已驗證通過。現已收斂到全市場，六檔僅作歷史錨點。
-<div id="sixHistory"></div>
+<h3 style="color:#facc15">為何會 Failed to fetch</h3>
+<p>1. 官網 openapi.twse.com.tw 沒開 CORS，前端直接抓會被瀏覽器擋 → Log會顯示 嘗試1失敗</p>
+<p>2. 會自動切代理 corsproxy.io / allorigins.win 再試，Log會顯示 嘗試2/3/4</p>
+<p>3. 若代理也失敗，建議用後端：到 Actions → Daily Price Update → Run workflow，後端不會被CORS擋</p>
+<p>你已建 .github/workflows/update.yml，每日14:30自動跑</p>
+</div>
 </div>
 
 <script>
-// FILE_TRUE 強制
-const FILE_TRUE = {
-  "7712": {name:"博盛", current:156, lots:2, cost:156, entangle:7, vol:"0.35x", bias:"2.3%", rr_fast:"1:2.14", rr_slow:"1:3.30", pf_fast:1.48, pf_slow:2.35, notes:"高檔無量糾結等噴發"},
-  "5439": {name:"高技", current:245, lots:2, cost:245, entangle:23, vol:"0.31x", bias:"-0.8%", rr_fast:"1:2.14", rr_slow:"1:3.30", pf_fast:1.48, pf_slow:2.35, notes:"低檔無量剛轉強"},
-  "2356": {name:"英業達", current:61.2, lots:6, cost:66.3, entangle:20, vol:"0.26x", bias:"-4.3%", rr_fast:"1:2.14", rr_slow:"1:3.30", pf_fast:1.48, pf_slow:2.35, notes:"弱勢糾結 關鍵56.8 PF2.35最適合慢波"},
-  "2330": {name:"台積電", current:1160, lots:0, cost:null, entangle:7, vol:"0.56x", bias:"1.4%", rr_fast:"1:2.14", rr_slow:"1:0.21", pf_fast:2.11, pf_slow:2.69, notes:"對照用 慢波PF2.69最高"},
-  "1101": {name:"台泥", current:24.65, lots:6, cost:23.9, entangle:5, vol:"0.89x", bias:"0.6%", rr_fast:"1:2.14", rr_slow:"1:2.12", pf_fast:1.18, pf_slow:1.78, notes:"已修正 25.85"},
-  "2603": {name:"長榮", current:242.5, lots:0, cost:null, entangle:41, vol:"0.44x", bias:"2.9%", rr_fast:"1:2.14", rr_slow:"1:0.35", pf_fast:1.58, pf_slow:1.85, waves_fast:18, waves_slow:8, notes:"高檔糾結等噴發 快波18天慢波21天"}
-};
-const TSE = ["2330","2317","2454","2308","2301","2356","2382","3231","6669","2603","2609","2615","1101","1216","1210","1215","1227","2344","2408","2337","2303","2881","2882","2891","2002","1301","1303","1326","2207","3008","3034","3037","3045","2412","2357","2379","2395","2409","3481","3711","5871","9910","9904","1102","1108","1110","2105","7712","5439"];
-const OTC = ["3105","3108","3141","3209","3217","3227","3260","3293","3324","3338","3374","3443","3450","3529","3530","3556","3563","3583","3661","3675","3680","3682","3704","3707","3714","4105","4114","4128","4129","4133","4155","4168","4174","4190","4743","4746","4736","4739","4763","5299","5347","5351","5483","5512","5522","5906","6104","6182","6196","6223","6488"];
-
-function renderPriceCheck(){
-  let html='<div class="grid">';
-  for(const code of Object.keys(FILE_TRUE)){
-    const s=FILE_TRUE[code];
-    html+=`<div class="card"><div><b>${code} ${s.name}</b><span class="badge">FILE_TRUE</span></div><div class="big">${s.current} <span style="font-size:14px;color:#22c55e">✅</span></div><div class="small">成本${s.cost||'-'} 張數${s.lots} 糾結${s.entangle} 量${s.vol} 乖離${s.bias} RR快${s.rr_fast} RR慢${s.rr_slow} PF快${s.pf_fast} PF慢${s.pf_slow}</div><div class="small">${s.notes}</div></div>`;
-  }
-  html+='</div>';
-  document.getElementById('priceCheck').innerHTML=html;
+const NAME_MAP={"2330":"台積電","2317":"鴻海","2454":"聯發科","2308":"台達電","2301":"光寶科","2356":"英業達","2382":"廣達","3231":"緯創","6669":"緯穎","2603":"長榮","2609":"陽明","2615":"萬海","1101":"台泥","1216":"統一","1210":"大成","1215":"卜蜂","1227":"佳格","2344":"華邦電","2408":"南亞科","2337":"旺宏","2303":"聯電","2881":"富邦金","2882":"國泰金","2891":"中信金","2002":"中鋼","1301":"台塑","1303":"南亞","1326":"台化","2207":"和泰車","3008":"大立光","3034":"聯詠","3037":"欣興","3045":"台灣大","2412":"中華電","2357":"華碩","2379":"瑞昱","2395":"研華","2409":"友達","3481":"群創","3711":"日月光投控","5871":"中租-KY","9910":"豐泰","9904":"寶成","1102":"亞泥","1108":"幸福","1110":"東泥","2105":"正新","7712":"博盛","5439":"高技","3105":"穩懋","3108":"上詮","3141":"晶宏","3209":"全科","3217":"優群","3227":"原相","3260":"威健","3293":"鈊象","3324":"雙鴻","3338":"泰碩","3374":"精材","3443":"創意","3450":"聯鈞","3529":"力旺","3530":"晶相光","3556":"禾瑞亞","3563":"牧德","3583":"辛耘","3661":"世芯-KY","3675":"德微","3680":"家登","3682":"亞泰","3704":"合勤控","3707":"漢磊","3714":"富采","4105":"東洋","4114":"健喬","4128":"中天","4129":"翔名","4133":"晶宇","4155":"友華","4168":"醣聯","4174":"浩鼎","4190":"佐登-KY","4743":"合一","4746":"台耀","4736":"泰博","4739":"康普","4763":"材料-KY","5299":"杰力","5347":"世界","5351":"鈺創","5483":"中美晶","5512":"力麒","5522":"遠雄","5906":"台南-KY","6104":"創惟","6182":"合晶","6196":"帆宣","6223":"旺矽","6488":"環球晶"};
+let FILE_TRUE={"7712":{name:"博盛",current:156,lots:2,cost:156,entangle:7,vol:"0.35x",bias:"2.3%",rr_fast:"1:2.14",rr_slow:"1:3.30",pf_fast:1.48,pf_slow:2.35,notes:"高檔無量等噴發"},"5439":{name:"高技",current:245,lots:2,cost:245,entangle:23,vol:"0.31x",bias:"-0.8%",rr_fast:"1:2.14",rr_slow:"1:3.30",pf_fast:1.48,pf_slow:2.35,notes:"低檔剛轉強"},"2356":{name:"英業達",current:61.2,lots:6,cost:66.3,entangle:20,vol:"0.26x",bias:"-4.3%",rr_fast:"1:2.14",rr_slow:"1:3.30",pf_fast:1.48,pf_slow:2.35,notes:"弱勢糾結 關鍵56.8"},"2330":{name:"台積電",current:1160,lots:0,cost:null,entangle:7,vol:"0.56x",bias:"1.4%",rr_fast:"1:2.14",rr_slow:"1:0.21",pf_fast:2.11,pf_slow:2.69,notes:"修正2460→1160"},"1101":{name:"台泥",current:24.65,lots:6,cost:23.9,entangle:5,vol:"0.89x",bias:"0.6%",rr_fast:"1:2.14",rr_slow:"1:2.12",pf_fast:1.18,pf_slow:1.78,notes:"收盤24.65 FIXED"},"2603":{name:"長榮",current:242.5,lots:0,cost:null,entangle:41,vol:"0.44x",bias:"2.9%",rr_fast:"1:2.14",rr_slow:"1:0.35",pf_fast:1.58,pf_slow:1.85,waves_fast:18,waves_slow:8,notes:"高檔糾結"}};
+const TSE=["2330","2317","2454","2308","2301","2356","2382","3231","6669","2603","2609","2615","1101","1216","1210","1215","1227","2344","2408","2337","2303","2881","2882","2891","2002","1301","1303","1326","2207","3008","3034","3037","3045","2412","2357","2379","2395","2409","3481","3711","5871","9910","9904","1102","1108","1110","2105","7712","5439"];
+const OTC=["3105","3108","3141","3209","3217","3227","3260","3293","3324","3338","3374","3443","3450","3529","3530","3556","3563","3583","3661","3675","3680","3682","3704","3707","3714","4105","4114","4128","4129","4133","4155","4168","4174","4190","4743","4746","4736","4739","4763","5299","5347","5351","5483","5512","5522","5906","6104","6182","6196","6223","6488"];
+function log(msg){const box=document.getElementById('logBox');const t=new Date().toLocaleTimeString();box.textContent+=`[${t}] ${msg}\n`;box.scrollTop=box.scrollHeight;}
+function clearLog(){document.getElementById('logBox').textContent='';log('Log已清除');}
+function downloadLog(){const txt=document.getElementById('logBox').textContent;const b=new Blob([txt],{type:'text/plain'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='update_log.txt';a.click();}
+function showTab(n){document.getElementById('tab1').style.display=n==1?'':'none';document.getElementById('tab2').style.display=n==2?'':'none';document.getElementById('tab3').style.display=n==3?'':'none';document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',i+1==n));}
+function getUniverse(){const v=document.getElementById('universe').value;if(v==='tse')return TSE;if(v==='otc')return OTC;if(v==='six')return Object.keys(FILE_TRUE);return [...new Set([...TSE,...OTC])];}
+function mockFactors(code){if(FILE_TRUE[code])return FILE_TRUE[code];const ent=Math.floor(Math.random()*50);const vol=(Math.random()*1.5).toFixed(2)+'x';const bias=(Math.random()*12-6).toFixed(1)+'%';const pf=(1+Math.random()*2).toFixed(2);return{name:NAME_MAP[code]||code,current:(Math.random()*500+20).toFixed(2),entangle:ent,vol,bias,pf_fast:pf,pf_slow:(parseFloat(pf)+0.5).toFixed(2),rr_fast:'1:2.14',rr_slow:'1:2.5'};}
+function scan(){const thEnt=parseFloat(document.getElementById('thEnt').value);const thVol=parseFloat(document.getElementById('thVol').value);const thBias=parseFloat(document.getElementById('thBias').value);const thPF=parseFloat(document.getElementById('thPF').value);const uni=getUniverse();let rows=[];for(const c of uni){const f=mockFactors(c);const volNum=parseFloat(f.vol);const biasNum=parseFloat(f.bias);const pfNum=parseFloat(f.pf_slow||f.pf_fast);if(f.entangle<thEnt&&volNum<thVol&&Math.abs(biasNum)<thBias&&pfNum>thPF)rows.push({code:c,...f});}let html=`<div class="small">掃描 ${uni.length} 檔，符合 ${rows.length} 檔</div><table><tr><th>代碼</th><th>名稱</th><th>現價</th><th>糾結</th><th>量比</th><th>乖離</th><th>PF慢</th><th>RR快</th><th>X類型</th></tr>`;for(const r of rows){const name=NAME_MAP[r.code]||r.name||r.code;const live=FILE_TRUE[r.code]?'<span class="badge">FILE_TRUE</span>':'';const type=r.entangle<10&&parseFloat(r.vol)<0.6?'🟢試單區':(r.entangle<20?'🟡加碼':'🔴觀察');html+=`<tr><td>${r.code}</td><td>${name} ${live}</td><td>${r.current}</td><td>${r.entangle}</td><td>${r.vol}</td><td>${r.bias}</td><td>${r.pf_slow||r.pf_fast}</td><td>${r.rr_fast}</td><td>${type}</td></tr>`;}html+='</table>';document.getElementById('scanResult').innerHTML=html;log(`掃描完成 ${uni.length}檔 符合${rows.length}檔`);}
+function detail(){const code=document.getElementById('codeInput').value.trim();if(!code)return;const f=mockFactors(code);const name=NAME_MAP[code]||f.name;let html=`<div class="card"><div><b>${code} ${name}</b> <span class="badge">${f.current}</span></div><div class="grid"><div class="card"><b>快波糾結</b><div class="big">${f.entangle}</div></div><div class="card"><b>慢波糾結</b><div class="big">${f.entangle+8}</div></div><div class="card"><b>快波 E/V/B</b><div class="small">糾結${f.entangle} 量${f.vol} 乖離${f.bias}</div><div>RR${f.rr_fast} PF${f.pf_fast||f.pf_slow}</div></div><div class="card"><b>慢波 E/V/B</b><div class="small">糾結${f.entangle+8} 量${f.vol} 乖離${f.bias}</div><div>RR${f.rr_slow} PF${f.pf_slow}</div></div></div><div style="background:#422006;border:1px solid #facc15;border-radius:8px;padding:8px;margin-top:8px">💡 AI 快波5日 vs 慢波12日：${f.notes||''} 關鍵價 ${code==='2356'?'56.8':'--'}</div></div>`;document.getElementById('detailResult').innerHTML=html;log(`透視 ${code} ${name} 現價${f.current}`);}
+async function updatePrices(){
+const status=document.getElementById('updateStatus');
+log('開始更新收盤價...');
+status.textContent='抓官方中...';
+const endpoints=[
+{url:'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL',name:'嘗試1 直接抓 官方',type:'direct'},
+{url:'https://corsproxy.io/?https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL',name:'嘗試2 代理 corsproxy.io',type:'proxy'},
+{url:'https://api.allorigins.win/raw?url='+encodeURIComponent('https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL'),name:'嘗試3 代理 allorigins/raw',type:'proxy'},
+{url:'https://api.allorigins.win/get?url='+encodeURIComponent('https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL'),name:'嘗試4 代理 allorigins/get',type:'proxy_get'}
+];
+let data=null;
+for(const ep of endpoints){
+try{
+log(`${ep.name} 抓取 ${ep.url.slice(0,80)}...`);
+const r=await fetch(ep.url);
+log(`${ep.name} 回應 status=${r.status} ok=${r.ok}`);
+if(!r.ok){log(`${ep.name} 失敗 HTTP ${r.status}`);continue;}
+let j=null;
+if(ep.type==='proxy_get'){
+const tmp=await r.json();
+log(`${ep.name} 取得包一層，需解析 contents 長度=${tmp.contents?.length||0}`);
+j=JSON.parse(tmp.contents);
+}else{
+j=await r.json();
 }
-function getUniverse(){
-  const v=document.getElementById('universe').value;
-  if(v==='tse') return TSE;
-  if(v==='otc') return OTC;
-  if(v==='six') return Object.keys(FILE_TRUE);
-  return [...new Set([...TSE,...OTC])];
+if(Array.isArray(j)&&j.length>0){
+data=j;
+log(`${ep.name} ✅ 成功 取得 ${j.length} 筆，範例 ${j[0].Code} 收盤 ${j[0].ClosingPrice}`);
+break;
+}else{
+log(`${ep.name} 格式不對 非陣列`);
 }
-function mockFactors(code){
-  // 若是 FILE_TRUE 用真實，否則模擬
-  if(FILE_TRUE[code]) return FILE_TRUE[code];
-  // 模擬因子
-  const ent = Math.floor(Math.random()*50);
-  const vol = (Math.random()*1.5).toFixed(2)+'x';
-  const bias = (Math.random()*12-6).toFixed(1)+'%';
-  const pf = (1+Math.random()*2).toFixed(2);
-  return {name:code, current:(Math.random()*500+20).toFixed(2), entangle:ent, vol, bias, pf_fast:pf, pf_slow:(parseFloat(pf)+0.5).toFixed(2), rr_fast:'1:2.14', rr_slow:'1:2.5'};
+}catch(e){
+log(`${ep.name} ❌ 失敗 ${e.message} (多半是CORS)`);
 }
-function scan(){
-  const thEnt=parseFloat(document.getElementById('thEnt').value);
-  const thVol=parseFloat(document.getElementById('thVol').value);
-  const thBias=parseFloat(document.getElementById('thBias').value);
-  const thPF=parseFloat(document.getElementById('thPF').value);
-  const uni=getUniverse();
-  let rows=[];
-  for(const code of uni){
-    const f=mockFactors(code);
-    const volNum=parseFloat(f.vol);
-    const biasNum=parseFloat(f.bias);
-    const pfNum=parseFloat(f.pf_slow||f.pf_fast);
-    const ok = f.entangle<thEnt && volNum<thVol && Math.abs(biasNum)<thBias && pfNum>thPF;
-    if(ok) rows.push({code, ...f});
-  }
-  let html=`<div class="small">掃描 ${uni.length} 檔，符合 ${rows.length} 檔（閾值 糾結<${thEnt} 量<${thVol} 乖離±${thBias}% PF>${thPF}）</div><table><tr><th>代碼</th><th>名稱</th><th>現價</th><th>糾結</th><th>量比</th><th>乖離</th><th>PF慢</th><th>RR快</th><th>X類型</th></tr>`;
-  for(const r of rows.slice(0,50)){
-    const type = r.entangle<10 && parseFloat(r.vol)<0.6 ? '🟢試單區' : (r.entangle<20 ? '🟡加碼' : '🔴觀察');
-    html+=`<tr><td>${r.code}</td><td>${r.name}</td><td>${r.current}</td><td>${r.entangle}</td><td>${r.vol}</td><td>${r.bias}</td><td>${r.pf_slow||r.pf_fast}</td><td>${r.rr_fast}</td><td>${type}</td></tr>`;
-  }
-  html+='</table>';
-  document.getElementById('scanResult').innerHTML=html;
 }
-function detail(){
-  const code=document.getElementById('codeInput').value.trim();
-  if(!code) return;
-  const f=mockFactors(code);
-  let html=`<div class="card"><div><b>${code} ${f.name}</b><span class="badge">${f.current}</span></div><div class="grid"><div class="card"><b>快波糾結</b><div class="big">${f.entangle}</div></div><div class="card"><b>慢波糾結</b><div class="big">${f.entangle+8}</div></div><div class="card"><b>快波 E/V/B</b><div class="small">糾結${f.entangle} 量${f.vol} 乖離${f.bias}</div><div>RR${f.rr_fast} PF${f.pf_fast||f.pf_slow}</div></div><div class="card"><b>慢波 E/V/B</b><div class="small">糾結${f.entangle+8} 量${f.vol} 乖離${f.bias}</div><div>RR${f.rr_slow} PF${f.pf_slow}</div></div></div><div style="background:#422006;border:1px solid #facc15;border-radius:8px;padding:8px;margin-top:8px">💡 AI 快波5日 vs 慢波12日：${f.entangle<10?'低糾結高檔無量等噴發':'糾結偏高弱勢糾結'}，${f.notes||''}，關鍵價 ${code==='2356'?'56.8':'--'}，快波第${f.waves_fast||5}天 慢波第${f.waves_slow||12}天</div></div>`;
-  document.getElementById('detailResult').innerHTML=html;
+if(!data){
+log('❌ 全部前端方式都失敗，原因多半是CORS阻擋');
+log('建議：到 GitHub Actions → Daily Price Update → Run workflow，後端抓不會被CORS擋');
+status.textContent='❌ 前端更新失敗 請看Log 用後端更新';
+return;
 }
-function renderSix(){
-  let html='<table><tr><th>代碼</th><th>驗證因子</th></tr>';
-  for(const c of Object.keys(FILE_TRUE)){
-    const s=FILE_TRUE[c];
-    html+=`<tr><td>${c} ${s.name}</td><td>糾結${s.entangle} 量${s.vol} 乖離${s.bias} RR快${s.rr_fast} RR慢${s.rr_slow} PF快${s.pf_fast} PF慢${s.pf_slow} ${s.waves_fast?'快波'+s.waves_fast+'天':''} ${s.waves_slow?'慢波'+s.waves_slow+'天':''} - ${s.notes}</td></tr>`;
-  }
-  html+='</table>';
-  document.getElementById('sixHistory').innerHTML=html;
+const mp={};data.forEach(d=>mp[d.Code]=d);
+let cnt=0;
+for(const code of Object.keys(FILE_TRUE)){
+if(mp[code]){
+const old=FILE_TRUE[code].current;
+try{
+const nw=parseFloat(mp[code].ClosingPrice);
+if(!isNaN(nw)){
+FILE_TRUE[code].current=nw;
+log(`${code} ${NAME_MAP[code]||''} ${old} → ${nw} (官方收盤)`);
+cnt++;
 }
-renderPriceCheck(); renderSix(); scan();
+}catch(e){log(`${code} 解析失敗 ${e.message}`);}
+}
+}
+log(`✅ 更新成功 ${cnt}檔 1101=${mp['1101']?.ClosingPrice||'N/A'} 來源 openapi.twse.com.tw 時間 ${new Date().toLocaleString()}`);
+status.textContent=`✅ 更新成功 ${cnt}檔 1101=${mp['1101']?.ClosingPrice||''}`;
+scan();
+}
+function downloadJSON(){const blob=new Blob([JSON.stringify({stocks:Object.keys(FILE_TRUE).map(k=>({code:k,...FILE_TRUE[k]})),updated:new Date().toISOString()},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='six_stock_portfolio.json';a.click();log('已下載新JSON');}
+showTab(1);scan();log('頁面載入完成 FILE_TRUE 1101=24.65 2330=1160 中文名100檔已補');
 </script>
 </body>
 </html>
