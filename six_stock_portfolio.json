@@ -50,7 +50,7 @@
       "name": "台積電",
       "cost": null,
       "lots": 0,
-      "current": 1160,
+      "current": 2500.0,
       "entangle": 7,
       "vol": "0.56x",
       "bias": "1.4%",
@@ -65,7 +65,7 @@
       "name": "台泥",
       "cost": 23.9,
       "lots": 6,
-      "current": 25.25,
+      "current": 25.65,
       "entangle": 5,
       "vol": "0.89x",
       "bias": "0.6%",
@@ -93,5 +93,5 @@
       "notes": "後端官方 242.5->243.0"
     }
   ],
-  "updated": "2026-09-24 13:30 close manual 1101=25.25 real close user reported"
+  "updated": "2026-09-24 05:54 backend auto 1101=25.65"
 }
