@@ -1,0 +1,17 @@
+{
+  "name": "twstocklab",
+  "version": "4.0.0",
+  "description": "TWStockLab 全市場 X因子台股研究室 - 不只是六檔",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "fetch": "python3 official_market_fetch.py --date 2026-09-23 --out ./official-output",
+    "diagnose": "python3 official_market_diagnose.py --date 2026-09-23"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}
