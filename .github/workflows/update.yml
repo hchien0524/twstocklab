@@ -1,0 +1,35 @@
+name: Daily Price Update
+on:
+  schedule:
+    - cron: '30 6 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch TWSE official close
+        run: |
+          pip install requests -q
+          python3 -c "
+          import requests, json
+          url='https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL'
+          data=requests.get(url, timeout=30).json()
+          mp={d['Code']:d for d in data}
+          port=json.load(open('six_stock_portfolio.json',encoding='utf-8'))
+          for s in port['stocks']:
+              c=s['code']
+              if c in mp:
+                  try:
+                      s['current']=float(mp[c]['ClosingPrice'])
+                  except: pass
+          json.dump(port, open('six_stock_portfolio.json','w',encoding='utf-8'), ensure_ascii=False, indent=2)
+          print('1101', mp.get('1101',{}).get('ClosingPrice'))
+          "
+      - name: Commit push
+        run: |
+          git config user.name "price-bot"
+          git config user.email "bot@github.com"
+          git add six_stock_portfolio.json
+          git diff --staged --quiet || (git commit -m "auto: close $(date +%F) 1101 update" && git push)
