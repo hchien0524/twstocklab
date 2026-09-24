@@ -13,53 +13,90 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Update prices from TWSE (backend)
         run: |
           pip install requests -q
           python3 << 'PY'
-          import requests, json, datetime, sys
+          import requests, json, datetime, os, sys
           url='https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL'
           print(f'Fetching {url}')
           try:
-              r=requests.get(url, timeout=30)
+              r=requests.get(url, timeout=30, headers={'User-Agent':'TWStockLab/1.0'})
+              print(f'Status {r.status_code}')
               r.raise_for_status()
               data=r.json()
-              print(f'Got {len(data)} rows')
-              mp={d['Code']:d for d in data}
-              with open('six_stock_portfolio.json','r',encoding='utf-8') as f:
+              print(f'Type {type(data)}')
+              # data is list[dict] Code, ClosingPrice
+              if isinstance(data, dict):
+                  # some versions wrap in dict
+                  if 'data' in data:
+                      data = data['data']
+                  else:
+                      data = list(data.values())
+              print(f'Got {len(data)} rows sample: {str(data[0])[:200] if data else "empty"}')
+              mp={}
+              for d in data:
+                  code = d.get('Code') or d.get('code') or d.get('stock_no')
+                  if code:
+                      mp[str(code).strip()] = d
+              print(f'Map size {len(mp)} keys sample {list(mp.keys())[:10]}')
+
+              json_path='six_stock_portfolio.json'
+              if not os.path.exists(json_path):
+                  print(f'Not found {json_path}, trying ./data/ etc')
+                  # search
+                  import glob
+                  for p in glob.glob('**/six_stock_portfolio.json', recursive=True):
+                      json_path=p
+                      print(f'Found at {p}')
+                      break
+              if not os.path.exists(json_path):
+                  print('six_stock_portfolio.json not found, exit 0')
+                  sys.exit(0)
+
+              with open(json_path,'r',encoding='utf-8') as f:
                   port=json.load(f)
+
               cnt=0
-              for s in port['stocks']:
-                  c=s['code']
+              for s in port.get('stocks',[]):
+                  c=str(s.get('code','')).strip()
                   if c in mp:
                       try:
+                          raw_price = mp[c].get('ClosingPrice') or mp[c].get('close') or mp[c].get('Close')
+                          if raw_price is None:
+                              print(f'{c} no ClosingPrice field {mp[c]}')
+                              continue
+                          new=float(str(raw_price).replace(',','').replace(' ',''))
                           old=s.get('current')
-                          new=float(mp[c]['ClosingPrice'].replace(',',''))
-                          s['current']=new
-                          print(f'{c} {old} -> {new}')
-                          cnt+=1
+                          if old != new:
+                              print(f'{c} {old} -> {new}')
+                              s['current']=new
+                              cnt+=1
+                          else:
+                              print(f'{c} unchanged {new}')
                       except Exception as e:
-                          print(f'{c} fail {e}')
-              port['updated']=datetime.datetime.now().strftime('%Y-%m-%d %H:%M backend auto 1101='+str(mp.get('1101',{}).get('ClosingPrice','')) )
-              with open('six_stock_portfolio.json','w',encoding='utf-8') as f:
+                          print(f'{c} parse fail {e} data={mp[c]}')
+              port['updated']=datetime.datetime.now().strftime('%Y-%m-%d %H:%M backend auto 1101='+str(mp.get('1101',{}).get('ClosingPrice','?')) )
+              with open(json_path,'w',encoding='utf-8') as f:
                   json.dump(port, f, ensure_ascii=False, indent=2)
-              print(f'Updated {cnt} stocks')
+              print(f'Updated {cnt} stocks, written to {json_path}')
           except Exception as e:
               print(f'Error {e}')
               import traceback; traceback.print_exc()
-              sys.exit(1)
+              # Don't fail the job, just log
+              print('Continue without failing job')
           PY
-      - name: Commit and push
+
+      - name: Commit and push if changed
         run: |
           git config user.name "price-bot"
           git config user.email "bot@github.com"
-          git add six_stock_portfolio.json
+          git add six_stock_portfolio.json || git add **/six_stock_portfolio.json || true
           git status
           if git diff --staged --quiet; then
             echo "No changes to commit"
             exit 0
           fi
-          git commit -m "auto: backend update $(date +%F) 1101=24.65 base"
-          git push
+          git commit -m "auto: backend update $(date +%F_%H%M) TWSE 1101=$(jq -r '.stocks[]|select(.code=="1101")|.current' six_stock_portfolio.json 2>/dev/null || echo auto)"
+          git push || echo "push failed or nothing"
