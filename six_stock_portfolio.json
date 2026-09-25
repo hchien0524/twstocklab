@@ -35,7 +35,7 @@
       "name": "英業達",
       "cost": 66.3,
       "lots": 6,
-      "current": 61.0,
+      "current": 59.9,
       "entangle": 20,
       "vol": "0.26x",
       "bias": "-4.3%",
@@ -50,7 +50,7 @@
       "name": "台積電",
       "cost": null,
       "lots": 0,
-      "current": 2500.0,
+      "current": 2475.0,
       "entangle": 7,
       "vol": "0.56x",
       "bias": "1.4%",
@@ -65,7 +65,7 @@
       "name": "台泥",
       "cost": 23.9,
       "lots": 6,
-      "current": 25.65,
+      "current": 25.25,
       "entangle": 5,
       "vol": "0.89x",
       "bias": "0.6%",
@@ -93,5 +93,5 @@
       "notes": "後端官方 242.5->243.0"
     }
   ],
-  "updated": "2026-09-24 11:59 backend auto 1101=25.65"
+  "updated": "2026-09-25 12:00 backend auto 1101=25.25"
 }
